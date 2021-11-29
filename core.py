@@ -1,5 +1,6 @@
 import json
 import random
+from midiutil import MIDIFile
 
 sname = {'majscale':'Major scale', 'minscale':'Minor scale'}
 chartopc = {'C':0, 'C#':1, 'Db':1, 'D':2, 'D#':3, 'Eb':3, 'E':4, 'F':5, 'F#':6, 'Gb':6, 'G':7, 'G#':8, 'Ab':8, 'A':9, 'A#':10, 'Bb':10, 'B':11}
@@ -11,6 +12,10 @@ rdata.close()
 
 dchordtype = data['dchordtype']
 dscaletype = data['dscaletype']
+
+# NOTE ON DATA TYPE: 
+# A chord is a list in the following format: ["prefix", notes1, notes2, ...]
+# Where the prefix is the chord type: '' = Major, 'm' = Minor, '7' = Major 7th...
 
 # FUNCTION TO ADD CUSTOM CHORD TO ALL SCALETYPE LIBRARY (Chord format = ["prefix", notes1, notes2, ...])
 def addtoall(chord):
@@ -48,9 +53,19 @@ def addtoscale(chord,sdata):
     data['dchordtype'] = dchordtype
 
     with open('data.json','w') as wdata:
-        json.dump(data,wdata, indent = 4, sort_keys = True)
+        json.dump(data, wdata, indent = 4, sort_keys = True)
         wdata.close()
 
+def midiChord(midiobj, track, channel, chord, timesig, starttime):
+    for i in range(timesig[0]):                     # Loop to add instance of each chords according to number of notes in bar
+        for j in range(1, len(chord)):              # Loop to add notes of the current chord
+                if j == 1:
+                    tracker = 0
+                elif (chord[j] - chord[j - 1]) < 0: # Increase pitch if the pitch class of current note is smaller than the previous note
+                    tracker += 12
+                midiobj.addNote(track, channel, chord[j] + 48 + tracker, starttime, duration = 4 / timesig[1], volume = 100)
+        starttime += 4 / timesig[1]
+                
 class ChordProg:
     def __init__(self, scaletype, root='C', barnum=4):
         self.scaletype = scaletype
@@ -64,7 +79,7 @@ class ChordProg:
         for i in range(len(self.scalenotes)):                           # Change notes by adding the root offset to get new notes of the scale
             self.scalenotes[i] = (self.scalenotes[i] + self.rootoffset)%12
         for i in range(len(self.scalechords)):                          # Change notes in the chords of the scale type to get according chords
-            for j in range(1,len(self.scalechords[i])):
+            for j in range(1, len(self.scalechords[i])):
                 self.scalechords[i][j] = (self.scalechords[i][j] + self.rootoffset)%12
         self.prog = random.sample(self.scalechords,self.barnum)         # Generate a random progression equal the number of bars
 
@@ -85,12 +100,12 @@ class ChordProg:
             int(input('Number of bar in progression: '))
             )
 
-class Song:
-    def __init__(self, scaletype, root='C', vbarnum=8, pbarnum=4, cbarnum=4, timesig=[4,4], bpm=120):
+class Song:         # Song structure: verse - verse - chorus - verse - verse - chorus - bridge - chorus - chorus
+    def __init__(self, scaletype, root='C', vbarnum=4, cbarnum=4, bbarnum=4, timesig=[4,4], bpm=120):
         self.scaletype = scaletype
         self.vbarnum = vbarnum
-        self.pbarnum = pbarnum
         self.cbarnum = cbarnum
+        self.bbarnum = bbarnum
         self.timesig = timesig
         self.bpm = bpm
         self.root = root
@@ -105,18 +120,39 @@ class Song:
             for j in range(1,len(self.scalechords[i])):
                 self.scalechords[i][j] = (self.scalechords[i][j] + self.rootoffset)%12
         
-        self.prog = {
-            'verse':random.sample(self.scalechords, self.vbarnum),
-            'prechorus':random.sample(self.scalechords, self.pbarnum),
-            'chorus':random.sample(self.scalechords, self.cbarnum)
-            }
+        self.midi = MIDIFile()
+        self.midi.addTempo(0, 0, bpm)
+
+        self.genprog()
+        self.gensong()
         
-    def regenprog(self):
+    def genprog(self):
         self.prog = {
             'verse':random.sample(self.scalechords, self.vbarnum),
-            'pre-chorus':random.sample(self.scalechords, self.pbarnum),
-            'chorus':random.sample(self.scalechords, self.cbarnum)
+            'chorus':random.sample(self.scalechords, self.cbarnum),
+            'bridge':random.sample(self.scalechords, self.bbarnum)
             }
+
+    def gensong(self, pattern = 0):
+        if pattern == 0:
+            pattern = [0, 1, 0, 1, 2, 1, 1]
+        starttime = 0
+        for x in pattern:
+            if x == 0:
+                for chord in self.prog['verse']:
+                    midiChord(self.midi, 0, 0, chord, self.timesig, starttime)
+                    starttime += self.timesig[0] * (self.timesig[1] / 4)
+            elif x == 1:
+                for chord in self.prog['chorus']:
+                        midiChord(self.midi, 0, 0, chord, self.timesig, starttime)
+                        starttime += self.timesig[0] * (self.timesig[1] / 4)
+            elif x == 2:
+                for chord in self.prog['bridge']:
+                    midiChord(self.midi, 0, 0, chord, self.timesig, starttime)
+                    starttime += self.timesig[0] * (self.timesig[1] / 4)
+
+        with open('midifile.midi', 'wb') as output:
+            self.midi.writeFile(output)
 
     def printprog(self):
         print('Your progression is:')
@@ -133,8 +169,8 @@ class Song:
             input('Enter "majscale"/"minscale": '),
             input('Root note: '),
             int(input('Number of bar in verse progression: ')),
-            int(input('Number of bar in pre-chorus progression: ')),
             int(input('Number of bar in chorus progression: ')),
+            int(input('Number of bar in bridge progression: ')),
             [int(x) for x in input('Time signature (ex: 4 4): ').split()],
             int(input('BPM of the song: '))
             )
