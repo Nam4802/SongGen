@@ -1,5 +1,6 @@
 import json
 import random
+import math
 from midiutil import MIDIFile
 
 sname = {'majscale':'Major scale', 'minscale':'Minor scale'}
@@ -56,14 +57,14 @@ def addtoscale(chord,sdata):
         json.dump(data, wdata, indent = 4, sort_keys = True)
         wdata.close()
 
-def midiChord(midiobj, track, channel, chord, timesig, starttime):
+def addChordMidi(midiobj, track, channel, chord, timesig, starttime):
     for i in range(timesig[0]):                     # Loop to add instance of each chords according to number of notes in bar
         for j in range(1, len(chord)):              # Loop to add notes of the current chord
                 if j == 1:
                     tracker = 0
                 elif (chord[j] - chord[j - 1]) < 0: # Increase pitch if the pitch class of current note is smaller than the previous note
                     tracker += 12
-                midiobj.addNote(track, channel, chord[j] + 48 + tracker, starttime, duration = 4 / timesig[1], volume = 100)
+                midiobj.addNote(track, channel, chord[j] + 60 + tracker, starttime, duration = 4 / timesig[1], volume = 100)
         starttime += 4 / timesig[1]
                 
 class ChordProg:
@@ -122,6 +123,7 @@ class Song:         # Song structure: verse - verse - chorus - verse - verse - c
         
         self.midi = MIDIFile()
         self.midi.addTempo(0, 0, bpm)
+        self.midi.addTimeSignature(0, 0, timesig[0], int(math.log2(timesig[1])), 24)
 
         self.genprog()
         self.gensong()
@@ -140,15 +142,15 @@ class Song:         # Song structure: verse - verse - chorus - verse - verse - c
         for x in pattern:
             if x == 0:
                 for chord in self.prog['verse']:
-                    midiChord(self.midi, 0, 0, chord, self.timesig, starttime)
+                    addChordMidi(self.midi, 0, 0, chord, self.timesig, starttime)
                     starttime += self.timesig[0] * (self.timesig[1] / 4)
             elif x == 1:
                 for chord in self.prog['chorus']:
-                        midiChord(self.midi, 0, 0, chord, self.timesig, starttime)
+                        addChordMidi(self.midi, 0, 0, chord, self.timesig, starttime)
                         starttime += self.timesig[0] * (self.timesig[1] / 4)
             elif x == 2:
                 for chord in self.prog['bridge']:
-                    midiChord(self.midi, 0, 0, chord, self.timesig, starttime)
+                    addChordMidi(self.midi, 0, 0, chord, self.timesig, starttime)
                     starttime += self.timesig[0] * (self.timesig[1] / 4)
 
         with open('midifile.midi', 'wb') as output:
@@ -165,12 +167,67 @@ class Song:         # Song structure: verse - verse - chorus - verse - verse - c
 
     @classmethod
     def getsong(cls):
-        return cls(
-            input('Enter "majscale"/"minscale": '),
-            input('Root note: '),
-            int(input('Number of bar in verse progression: ')),
-            int(input('Number of bar in chorus progression: ')),
-            int(input('Number of bar in bridge progression: ')),
-            [int(x) for x in input('Time signature (ex: 4 4): ').split()],
-            int(input('BPM of the song: '))
-            )
+        while True:
+            scaletype = input('Enter "majscale"/"minscale": ')
+            if scaletype not in sname:
+                print('This is not what I asked for. Please try again.')
+                continue
+            else:
+                break
+        while True:
+            root = input('Root note: ')
+            if root not in chartopc:
+                print('This is not what I asked for. Please try again.')
+                continue
+            else:
+                break
+        while True:
+            try:
+                vbarnum = int(input('Number of bar in verse progression: '))
+            except ValueError:
+                print('This is not what I asked for. Please try again.')
+                continue
+            else:
+                vbarnum = abs(vbarnum)
+                break
+        while True:
+            try:
+                cbarnum = int(input('Number of bar in chorus progression: '))
+            except ValueError:
+                print('This is not what I asked for. Please try again.')
+                continue
+            else:
+                cbarnum = abs(cbarnum)
+                break
+        while True:
+            try:
+                bbarnum = int(input('Number of bar in bridge progression: '))
+            except ValueError:
+                print('This is not what I asked for. Please try again.')
+                continue
+            else:
+                bbarnum = abs(bbarnum)
+                break
+        while True:
+            try:
+                timesig = [int(x) for x in input('Time signature (ex: 4 4): ').split()]
+            except ValueError:
+                print('This is not what I asked for. Please try again.')
+                continue
+            if len(timesig) != 2 and len(timesig) != 0:
+                print('This is not what I asked for. Please try again.')
+                continue
+            else:
+                timesig =  [abs(x) for x in timesig]
+                break
+        while True:
+            try:
+                bpm = int(input('BPM of the song: '))
+            except ValueError:
+                print('This is not what I asked for. Please try again.')
+                continue
+            else:
+                bpm = abs(bpm)
+                break
+        
+        return cls(scaletype, root, vbarnum, cbarnum, bbarnum, timesig, bpm)
