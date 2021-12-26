@@ -130,14 +130,17 @@ class Song:         # Song structure: verse - verse - chorus - verse - verse - c
         
     def genprog(self):
         self.prog = {
-            'verse':random.sample(self.scalechords, self.vbarnum),
-            'chorus':random.sample(self.scalechords, self.cbarnum),
-            'bridge':random.sample(self.scalechords, self.bbarnum)
+            'verse': random.choices(self.scalechords, k = self.vbarnum - 1),
+            'chorus': random.choices(self.scalechords, k = self.cbarnum - 1),
+            'bridge': random.choices(self.scalechords, k = self.bbarnum - 1)
             }
+        self.prog['verse'].insert(0, self.scalechords[0])
+        self.prog['chorus'].insert(0, self.scalechords[0])
+        self.prog['bridge'].insert(0, self.scalechords[0])
 
     def gensong(self, pattern = 0):
         if pattern == 0:
-            pattern = [0, 1, 0, 1, 2, 1, 1]
+            pattern = [0, 0, 1, 0, 1, 2, 1, 1]
         starttime = 0
         for x in pattern:
             if x == 0:
