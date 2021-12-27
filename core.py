@@ -131,13 +131,10 @@ class Song:         # Song structure: verse - verse - chorus - verse - verse - c
         
     def genprog(self):
         self.prog = {
-            'verse': [],
-            'chorus': [],
-            'bridge': []
+            'verse': genalgorithm.genchord(self.scaletype, self.scalechords, self.vbarnum),
+            'chorus': genalgorithm.genchord(self.scaletype, self.scalechords, self.cbarnum),
+            'bridge': genalgorithm.genchord(self.scaletype, self.scalechords, self.bbarnum)
             }
-        genalgorithm.genchord(self.prog['verse'], self.scaletype, self.scalechords, self.vbarnum)
-        genalgorithm.genchord(self.prog['chorus'], self.scaletype, self.scalechords, self.cbarnum)
-        genalgorithm.genchord(self.prog['bridge'], self.scaletype, self.scalechords, self.bbarnum)
 
     def gensong(self, pattern = 0):
         if pattern == 0:
