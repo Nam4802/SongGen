@@ -3,18 +3,17 @@ import random
 import math
 from midiutil import MIDIFile
 import genalgorithm
-from genalgorithm import chordproglib
 
 sname = {'majscale':'Major scale', 'minscale':'Minor scale'}
 chartopc = {'C':0, 'C#':1, 'Db':1, 'D':2, 'D#':3, 'Eb':3, 'E':4, 'F':5, 'F#':6, 'Gb':6, 'G':7, 'G#':8, 'Ab':8, 'A':9, 'A#':10, 'Bb':10, 'B':11}
 pctochar = {0:'C', 1:'C#', 2:'D', 3:'D#', 4:'E', 5:'F', 6:'F#', 7:'G', 8:'G#', 9:'A', 10:'A#', 11:'B'}
 
-rdata = open('data.json','r')
-data = json.load(rdata)
-rdata.close()
+with open('chordlib.json','r') as rdata:
+    chordlib = json.load(rdata)
+    rdata.close()
 
-dchordtype = data['dchordtype']
-dscaletype = data['dscaletype']
+dchordtype = chordlib['dchordtype']
+dscaletype = chordlib['dscaletype']
 
 # NOTE ON DATA TYPE: 
 # A chord is a list in the following format: ["prefix", notes1, notes2, ...]
@@ -33,11 +32,11 @@ def addtoall(chord):
                 testofnote.insert(0,chord[0])
                 sdata['ctypeofscale'].append(testofnote)
     
-    data['dscaletype'] = dscaletype                                     # Saving back to data.json
-    data['dchordtype'] = dchordtype
+    chordlib['dscaletype'] = dscaletype                                 # Saving back to data.json
+    chordlib['dchordtype'] = dchordtype
 
-    with open('data.json','w') as wdata:
-        json.dump(data,wdata, indent = 4, sort_keys = True)
+    with open('chordlib.json','w') as wdata:
+        json.dump(chordlib, wdata, indent = 4, sort_keys = True)
         wdata.close()
 
 # FUNCTION TO ADD CUSTOM CHORD TO 1 SCALETYPE LIBRARY
@@ -52,11 +51,11 @@ def addtoscale(chord,sdata):
             tcofnote.insert(0,chord[0])
             sdata['ctypeofscale'].append(tcofnote)
 
-    data['dscaletype'] = dscaletype
-    data['dchordtype'] = dchordtype
+    chordlib['dscaletype'] = dscaletype
+    chordlib['dchordtype'] = dchordtype
 
-    with open('data.json','w') as wdata:
-        json.dump(data, wdata, indent = 4, sort_keys = True)
+    with open('chordlib.json','w') as wdata:
+        json.dump(chordlib, wdata, indent = 4, sort_keys = True)
         wdata.close()
 
 def addChordMidi(midiobj, track, channel, chord, timesig, starttime):
@@ -132,13 +131,13 @@ class Song:         # Song structure: verse - verse - chorus - verse - verse - c
         
     def genprog(self):
         self.prog = {
-            'verse': random.choices(self.scalechords, k = self.vbarnum - 1),
-            'chorus': random.choices(self.scalechords, k = self.cbarnum - 1),
-            'bridge': random.choices(self.scalechords, k = self.bbarnum - 1)
+            'verse': [],
+            'chorus': [],
+            'bridge': []
             }
-        self.prog['verse'].insert(0, self.scalechords[0])
-        self.prog['chorus'].insert(0, self.scalechords[0])
-        self.prog['bridge'].insert(0, self.scalechords[0])
+        genalgorithm.genchord(self.prog['verse'], self.scaletype, self.scalechords, self.vbarnum)
+        genalgorithm.genchord(self.prog['chorus'], self.scaletype, self.scalechords, self.cbarnum)
+        genalgorithm.genchord(self.prog['bridge'], self.scaletype, self.scalechords, self.bbarnum)
 
     def gensong(self, pattern = 0):
         if pattern == 0:

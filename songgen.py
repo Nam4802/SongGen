@@ -9,11 +9,12 @@ chartopc = {'C':0, 'C#':1, 'Db':1, 'D':2, 'D#':3, 'Eb':3, 'E':4, 'F':5, 'F#':6, 
 pctochar = {0:'C', 1:'C#', 2:'D', 3:'D#', 4:'E', 5:'F', 6:'F#', 7:'G', 8:'G#', 9:'A', 10:'A#', 11:'B'}
 
 # Get scaletype & chordtype data
-rdata = open('data.json','r')
-data = json.load(rdata)
-rdata.close()
-dchordtype = data['dchordtype']
-dscaletype = data['dscaletype']
+with open('chordlib.json','r') as rdata:
+    chordlib = json.load(rdata)
+    rdata.close()
+
+dchordtype = chordlib['dchordtype']
+dscaletype = chordlib['dscaletype']
 
 # Input & Output
 def generateprog():
