@@ -2,6 +2,8 @@ import json
 import random
 import math
 from midiutil import MIDIFile
+import genalgorithm
+from genalgorithm import chordproglib
 
 sname = {'majscale':'Major scale', 'minscale':'Minor scale'}
 chartopc = {'C':0, 'C#':1, 'Db':1, 'D':2, 'D#':3, 'Eb':3, 'E':4, 'F':5, 'F#':6, 'Gb':6, 'G':7, 'G#':8, 'Ab':8, 'A':9, 'A#':10, 'Bb':10, 'B':11}
@@ -140,7 +142,7 @@ class Song:         # Song structure: verse - verse - chorus - verse - verse - c
 
     def gensong(self, pattern = 0):
         if pattern == 0:
-            pattern = [0, 0, 1, 0, 1, 2, 1, 1]
+            pattern = [0, 0, 1, 0, 0, 1, 2, 1, 1]
         starttime = 0
         for x in pattern:
             if x == 0:
