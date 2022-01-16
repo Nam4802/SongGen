@@ -57,52 +57,27 @@ def addtoscale(chord,sdata):
     with open('chordlib.json','w') as wdata:
         json.dump(chordlib, wdata, indent = 4, sort_keys = True)
         wdata.close()
-
-def addChordMidi(midiobj, track, channel, chord, timesig, starttime):
-    for i in range(timesig[0]):                     # Loop to add instance of each chords according to number of notes in bar
+        
+# FUNCTION TO ADD A CHORD TO MIDI TRACK
+def addChordMidi(midiobj, track: int, channel: int, chord: list, timesig: list, starttime: float):
+    for i in range(timesig[0]):                     # Loop to add each time a chord is played according to the number of notes in bar
         for j in range(1, len(chord)):              # Loop to add notes of the current chord
                 if j == 1:
                     tracker = 0
                 elif (chord[j] - chord[j - 1]) < 0: # Increase pitch if the pitch class of current note is smaller than the previous note
                     tracker += 12
-                midiobj.addNote(track, channel, chord[j] + 60 + tracker, starttime, duration = 4 / timesig[1], volume = 100)
-        starttime += 4 / timesig[1]
-                
-class ChordProg:
-    def __init__(self, scaletype, root='C', barnum=4):
-        self.scaletype = scaletype
-        self.barnum = barnum
-        self.root = root
-        self.scale = root + ' ' + sname[scaletype]
-        self.rootoffset = chartopc[root]          # Difference between the selected root and C
-        self.scalenotes = dscaletype[scaletype]['scalenotes']
-        self.scalechords = dscaletype[scaletype]['ctypeofscale']
+                midiobj.addNote(track, channel, chord[j] + 48 + tracker, starttime, duration = 4 / timesig[1], volume = 100)
+        starttime += 4 / timesig[1]                 # starttime is in quarter notes
 
-        for i in range(len(self.scalenotes)):                           # Change notes by adding the root offset to get new notes of the scale
-            self.scalenotes[i] = (self.scalenotes[i] + self.rootoffset)%12
-        for i in range(len(self.scalechords)):                          # Change notes in the chords of the scale type to get according chords
-            for j in range(1, len(self.scalechords[i])):
-                self.scalechords[i][j] = (self.scalechords[i][j] + self.rootoffset)%12
-        self.prog = random.sample(self.scalechords,self.barnum)         # Generate a random progression equal the number of bars
+# FUNCTION TO ADD A RIFF TO MIDI TRACK
+def addRiffMidi(midiobj, track: int, channel: int, riff: list, starttime: float):
+    for note in riff:
+        midinote = note[0] + 12 * (note[1] + 1)
+        duration = note[2]
+        midiobj.addNote(track, channel, midinote, starttime, duration, volume = 100)
+        starttime += duration
 
-    def regenprog(self):
-        self.prog = random.sample(self.scalechords,self.barnum)
-
-    def printprog(self):
-        print('Your progression is:', end = ' ')
-        for chord in self.prog:
-            print(pctochar[chord[1]] + chord[0], end= ' ')
-        print()
-
-    @classmethod
-    def getprog(cls):
-        return cls(
-            input('Enter "majscale"/"minscale": '),
-            input('Root note: '),
-            int(input('Number of bar in progression: '))
-            )
-
-class Song:         # Song structure: verse - verse - chorus - verse - verse - chorus - bridge - chorus - chorus
+class Song:         # Default song structure: verse - verse - chorus - verse - verse - chorus - bridge - solo - chorus - chorus
     def __init__(self, scaletype, root='C', vbarnum=4, cbarnum=4, bbarnum=4, timesig=[4,4], bpm=120):
         self.scaletype = scaletype
         self.vbarnum = vbarnum
@@ -115,57 +90,85 @@ class Song:         # Song structure: verse - verse - chorus - verse - verse - c
         self.rootoffset = chartopc[root]
         self.scalenotes = dscaletype[scaletype]['scalenotes']
         self.scalechords = dscaletype[scaletype]['ctypeofscale']
-        
+
+        # CHANGE DEFAULT SCALE NOTES & CHORDS TO THE CURRENT KEY'S
         for i in range(len(self.scalenotes)):
             self.scalenotes[i] = (self.scalenotes[i] + self.rootoffset)%12
         for i in range(len(self.scalechords)):
             for j in range(1,len(self.scalechords[i])):
                 self.scalechords[i][j] = (self.scalechords[i][j] + self.rootoffset)%12
         
-        self.midi = MIDIFile()
+        # INITIATE MIDI FILE OBJECT
+        self.midi = MIDIFile(2)
         self.midi.addTempo(0, 0, bpm)
+        self.midi.addTempo(1, 0, bpm)
         self.midi.addTimeSignature(0, 0, timesig[0], int(math.log2(timesig[1])), 24)
+        self.midi.addTimeSignature(1, 0, timesig[0], int(math.log2(timesig[1])), 24)
 
-        self.genprog()
+        # GENERATION OF THE SONG
+        self.genrythm()
+        self.genlead()
         self.gensong()
         
-    def genprog(self):
-        self.prog = {
+    # INSTANCE METHOD DECLARATION
+    
+    # Function to generate the chord progressions for the whole song
+    def genrythm(self):
+        self.rythm = {
             'verse': genalgorithm.genchord(self.scaletype, self.scalechords, self.vbarnum),
             'chorus': genalgorithm.genchord(self.scaletype, self.scalechords, self.cbarnum),
             'bridge': genalgorithm.genchord(self.scaletype, self.scalechords, self.bbarnum)
             }
 
+    # Function to generate the notes, riffs and solos for the whole song
+    def genlead(self):
+        self.lead = {'solo': genalgorithm.genriff(self.prog['chorus'], self.timesig)}
+
+    # Function to generate the midi file based on the specified song structure
+    #   Verse: 0
+    #   Chorus: 1
+    #   Bridge: 2
+    #   Solo: 3
     def gensong(self, pattern = 0):
         if pattern == 0:
-            pattern = [0, 0, 1, 0, 0, 1, 2, 1, 1]
-        starttime = 0
+            pattern = [0, 0, 1, 0, 0, 1, 2, 3, 1, 1]    # Default pattern
+        starttime_rythm = 0
+        starttime_lead = 0
         for x in pattern:
             if x == 0:
-                for chord in self.prog['verse']:
-                    addChordMidi(self.midi, 0, 0, chord, self.timesig, starttime)
-                    starttime += self.timesig[0] * (self.timesig[1] / 4)
+                for chord in self.rythm['verse']:
+                    addChordMidi(self.midi, 0, 0, chord, self.timesig, starttime_rythm)
+                    starttime_rythm += 4 * self.timesig[0] / self.timesig[1]
             elif x == 1:
-                for chord in self.prog['chorus']:
-                        addChordMidi(self.midi, 0, 0, chord, self.timesig, starttime)
-                        starttime += self.timesig[0] * (self.timesig[1] / 4)
+                for chord in self.rythm['chorus']:
+                        addChordMidi(self.midi, 0, 0, chord, self.timesig, starttime_rythm)
+                        starttime_rythm += 4 * self.timesig[0] / self.timesig[1]
             elif x == 2:
-                for chord in self.prog['bridge']:
-                    addChordMidi(self.midi, 0, 0, chord, self.timesig, starttime)
-                    starttime += self.timesig[0] * (self.timesig[1] / 4)
-
+                for chord in self.rythm['bridge']:
+                    addChordMidi(self.midi, 0, 0, chord, self.timesig, starttime_rythm)
+                    starttime_rythm += 4 * self.timesig[0] / self.timesig[1]
+            elif x == 3:
+                starttime_lead = starttime_rythm
+                for riff in self.lead['solo']:
+                    addRiffMidi(self.midi, 1, 0, riff, starttime_lead)
+                    starttime_lead += 4 * self.timesig[0] / self.timesig[1]
+                for chord in self.rythm['chorus']:
+                        addChordMidi(self.midi, 0, 0, chord, self.timesig, starttime_rythm)
+                        starttime_rythm += 4 * self.timesig[0] / self.timesig[1]
         with open('midifile.midi', 'wb') as output:
             self.midi.writeFile(output)
 
+    # Function to print the progression (chords) of each part of the song
     def printprog(self):
         print('Your progression is:')
-        for progname in self.prog:
+        for progname in self.rythm:
             print('   ' + progname.capitalize() + ':')
-            for chord in self.prog[progname]:
+            for chord in self.rythm[progname]:
                 print('   ' + pctochar[chord[1]] + chord[0], end = '')
             print()
         print()
 
+    # INPUT METHOD
     @classmethod
     def getsong(cls):
         while True:
