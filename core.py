@@ -22,15 +22,15 @@ dscaletype = chordlib['dscaletype']
 # FUNCTION TO ADD CUSTOM CHORD TO ALL SCALETYPE LIBRARY (Chord format = ["prefix", notes1, notes2, ...])
 def addtoall(chord):
     test = chord[1:]            # Chord to be added with prefix removed (test chord)
-    for sdata in dscaletype.values():                                   # Loop to go through all scale types
-        for notes in sdata['scalenotes']:                               # Loop to go through all notes (offset) in a scale type
+    for scaletype in dscaletype.values():                               # Loop to go through all scale types
+        for notes in scaletype['scalenotes']:                           # Loop to go through all notes (offset) in a scale type
             testofnote = []
             for i in test:                                              # Loop to add the note offset to all notes of the testing chord
                 i = i + notes
                 testofnote.append(i%12)
-            if set(testofnote).issubset(sdata['scalenotes']):           # Check if all the notes in the current testing chord belongs to scale
+            if set(testofnote).issubset(scaletype['scalenotes']):       # Check if all the notes in the current testing chord belongs to scale
                 testofnote.insert(0,chord[0])
-                sdata['ctypeofscale'].append(testofnote)
+                scaletype['ctypeofscale'].append(testofnote)
     
     chordlib['dscaletype'] = dscaletype                                 # Saving back to data.json
     chordlib['dchordtype'] = dchordtype
@@ -40,16 +40,16 @@ def addtoall(chord):
         wdata.close()
 
 # FUNCTION TO ADD CUSTOM CHORD TO 1 SCALETYPE LIBRARY
-def addtoscale(chord,sdata):
+def addtoscale(chord, scaletype):
     tc = chord[1:]
-    for notes in sdata['scalenotes']:
+    for notes in scaletype['scalenotes']:
         tcofnote = []
         for i in tc:
             i = i + notes
             tcofnote.append(i%12)
-        if set(tcofnote).issubset(sdata['scalenotes']):
+        if set(tcofnote).issubset(scaletype['scalenotes']):
             tcofnote.insert(0,chord[0])
-            sdata['ctypeofscale'].append(tcofnote)
+            scaletype['ctypeofscale'].append(tcofnote)
 
     chordlib['dscaletype'] = dscaletype
     chordlib['dchordtype'] = dchordtype
@@ -66,7 +66,7 @@ def addChordMidi(midiobj, track: int, channel: int, chord: list, timesig: list, 
                     tracker = 0
                 elif (chord[j] - chord[j - 1]) < 0: # Increase pitch if the pitch class of current note is smaller than the previous note
                     tracker += 12
-                midiobj.addNote(track, channel, chord[j] + 48 + tracker, starttime, duration = 4 / timesig[1], volume = 100)
+                midiobj.addNote(track, channel, chord[j] + 48 + tracker, starttime, duration = 4 / timesig[1], volume = 70)
         starttime += 4 / timesig[1]                 # starttime is in quarter notes
 
 # FUNCTION TO ADD A RIFF TO MIDI TRACK
@@ -117,12 +117,18 @@ class Song:         # Default song structure: verse - verse - chorus - verse - v
         self.rythm = {
             'verse': genchord(self.scaletype, self.scalechords, self.vbarnum),
             'chorus': genchord(self.scaletype, self.scalechords, self.cbarnum),
-            'bridge': genchord(self.scaletype, self.scalechords, self.bbarnum)
+            'bridge': genchord(self.scaletype, self.scalechords, self.bbarnum),
+            'solo': genchord(self.scaletype, self.scalechords, self.cbarnum),       # Solo use the same number of bar as chorus
             }
 
     # Function to generate the notes, riffs and solos for the whole song
     def genlead(self):
-        self.lead = {'solo': genriff(self.prog['chorus'], self.timesig)}
+        self.lead = {
+            'verse': genriff(self.rythm['verse'], self.timesig),
+            'chorus': genriff(self.rythm['chorus'], self.timesig),
+            'bridge': genriff(self.rythm['bridge'], self.timesig),
+            'solo': genriff(self.rythm['solo'], self.timesig),
+            }
 
     # Function to generate the midi file based on the specified song structure
     #   Verse: 0
@@ -132,18 +138,32 @@ class Song:         # Default song structure: verse - verse - chorus - verse - v
     def gensong(self, pattern = 0):
         if pattern == 0:
             pattern = [0, 0, 1, 0, 0, 1, 2, 3, 1, 1]    # Default pattern
+
         starttime_rythm = 0
         starttime_lead = 0
+
         for x in pattern:
             if x == 0:
+                starttime_lead = starttime_rythm        # Making sure the lead and rythm counter is synced
+                for riff in self.lead['verse']:
+                    addRiffMidi(self.midi, 1, 0, riff, starttime_lead)
+                    starttime_lead += 4 * self.timesig[0] / self.timesig[1]
                 for chord in self.rythm['verse']:
                     addChordMidi(self.midi, 0, 0, chord, self.timesig, starttime_rythm)
                     starttime_rythm += 4 * self.timesig[0] / self.timesig[1]
             elif x == 1:
+                starttime_lead = starttime_rythm
+                for riff in self.lead['chorus']:
+                    addRiffMidi(self.midi, 1, 0, riff, starttime_lead)
+                    starttime_lead += 4 * self.timesig[0] / self.timesig[1]
                 for chord in self.rythm['chorus']:
                         addChordMidi(self.midi, 0, 0, chord, self.timesig, starttime_rythm)
                         starttime_rythm += 4 * self.timesig[0] / self.timesig[1]
             elif x == 2:
+                starttime_lead = starttime_rythm
+                for riff in self.lead['bridge']:
+                    addRiffMidi(self.midi, 1, 0, riff, starttime_lead)
+                    starttime_lead += 4 * self.timesig[0] / self.timesig[1]
                 for chord in self.rythm['bridge']:
                     addChordMidi(self.midi, 0, 0, chord, self.timesig, starttime_rythm)
                     starttime_rythm += 4 * self.timesig[0] / self.timesig[1]
@@ -152,9 +172,10 @@ class Song:         # Default song structure: verse - verse - chorus - verse - v
                 for riff in self.lead['solo']:
                     addRiffMidi(self.midi, 1, 0, riff, starttime_lead)
                     starttime_lead += 4 * self.timesig[0] / self.timesig[1]
-                for chord in self.rythm['chorus']:
+                for chord in self.rythm['solo']:
                         addChordMidi(self.midi, 0, 0, chord, self.timesig, starttime_rythm)
                         starttime_rythm += 4 * self.timesig[0] / self.timesig[1]
+
         with open('midifile.midi', 'wb') as output:
             self.midi.writeFile(output)
 
