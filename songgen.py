@@ -2,7 +2,6 @@ import json
 import random
 import time
 from core import Song
-from genalgorithm import genriff
 
 # Dictionaries for printing
 sname = {'majscale':'Major scale', 'minscale':'Minor scale'}

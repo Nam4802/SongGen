@@ -2,7 +2,7 @@ import json
 import random
 import math
 from midiutil import MIDIFile
-import genalgorithm
+from generator import genchord, genriff
 
 sname = {'majscale':'Major scale', 'minscale':'Minor scale'}
 chartopc = {'C':0, 'C#':1, 'Db':1, 'D':2, 'D#':3, 'Eb':3, 'E':4, 'F':5, 'F#':6, 'Gb':6, 'G':7, 'G#':8, 'Ab':8, 'A':9, 'A#':10, 'Bb':10, 'B':11}
@@ -115,14 +115,14 @@ class Song:         # Default song structure: verse - verse - chorus - verse - v
     # Function to generate the chord progressions for the whole song
     def genrythm(self):
         self.rythm = {
-            'verse': genalgorithm.genchord(self.scaletype, self.scalechords, self.vbarnum),
-            'chorus': genalgorithm.genchord(self.scaletype, self.scalechords, self.cbarnum),
-            'bridge': genalgorithm.genchord(self.scaletype, self.scalechords, self.bbarnum)
+            'verse': genchord(self.scaletype, self.scalechords, self.vbarnum),
+            'chorus': genchord(self.scaletype, self.scalechords, self.cbarnum),
+            'bridge': genchord(self.scaletype, self.scalechords, self.bbarnum)
             }
 
     # Function to generate the notes, riffs and solos for the whole song
     def genlead(self):
-        self.lead = {'solo': genalgorithm.genriff(self.prog['chorus'], self.timesig)}
+        self.lead = {'solo': genriff(self.prog['chorus'], self.timesig)}
 
     # Function to generate the midi file based on the specified song structure
     #   Verse: 0
