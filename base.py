@@ -1,6 +1,6 @@
 import json
 
-chordlib = {
+basechordlib = {
     'dchordtype': {
         'major': ['', 0, 4, 7],
         'minor': ['m', 0, 3, 7],
@@ -53,7 +53,7 @@ chordlib = {
         }
     }
 
-chordproglib = {
+basechordproglib = {
     'majscale': {
         '4': [
             [0, 3, 4, 4], # I-IV-V-V
@@ -76,10 +76,56 @@ chordproglib = {
         }
     }
 
-with open('chordlib.json','w') as wdata:
+# FUNCTION TO RESET THE CHORDPROGLIB AND CHORDLIB WITH THE DATA IN THIS MODULE
+def resetlib():
+    with open('chordlib.json','w') as wdata:
+            json.dump(basechordlib, wdata, indent = 4, sort_keys = True)
+            wdata.close()
+
+    with open('chordproglib.json','w') as wdata:
+            json.dump(basechordproglib, wdata, indent = 4, sort_keys = True)
+            wdata.close()
+
+# FUNCTION TO ADD CUSTOM CHORD TO ALL SCALETYPE LIBRARY (Chord format = ["prefix", notes1, notes2, ...])
+def addtoall(chord):
+    with open('chordlib.json','r') as rdata:                            # Data initiation
+        chordlib = json.load(rdata)
+        rdata.close()
+
+    test = chord[1:]            # Chord to be added with prefix removed (test chord)
+    for scaletype in chordlib['dscaletype'].values():                   # Loop to go through all scale types
+        for notes in scaletype['scalenotes']:                           # Loop to go through all notes (offset) in a scale type
+            testofnote = []
+            for i in test:                                              # Loop to add the note offset to all notes of the testing chord
+                i = i + notes
+                testofnote.append(i%12)
+            if set(testofnote).issubset(scaletype['scalenotes']):       # Check if all the notes in the current testing chord belongs to scale
+                testofnote.insert(0,chord[0])
+                scaletype['ctypeofscale'].append(testofnote)
+    
+    with open('chordlib.json','w') as wdata:
         json.dump(chordlib, wdata, indent = 4, sort_keys = True)
         wdata.close()
 
-with open('chordproglib.json','w') as wdata:
-        json.dump(chordproglib, wdata, indent = 4, sort_keys = True)
+# FUNCTION TO ADD CUSTOM CHORD TO 1 SCALETYPE LIBRARY
+def addtoscale(chord, scaletype):                                       # scaletype should be something like chordlib['dscaletype']['majscale' or 'minscale']
+    with open('chordlib.json','r') as rdata:                            # Data initiation
+        chordlib = json.load(rdata)
+        rdata.close()
+
+    tc = chord[1:]
+    for notes in scaletype['scalenotes']:
+        tcofnote = []
+        for i in tc:
+            i = i + notes
+            tcofnote.append(i%12)
+        if set(tcofnote).issubset(scaletype['scalenotes']):
+            tcofnote.insert(0,chord[0])
+            scaletype['ctypeofscale'].append(tcofnote)
+
+    chordlib['dscaletype'] = dscaletype
+    chordlib['dchordtype'] = dchordtype
+
+    with open('chordlib.json','w') as wdata:
+        json.dump(chordlib, wdata, indent = 4, sort_keys = True)
         wdata.close()

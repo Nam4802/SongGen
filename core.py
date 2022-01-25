@@ -8,6 +8,7 @@ sname = {'majscale':'Major scale', 'minscale':'Minor scale'}
 chartopc = {'C':0, 'C#':1, 'Db':1, 'D':2, 'D#':3, 'Eb':3, 'E':4, 'F':5, 'F#':6, 'Gb':6, 'G':7, 'G#':8, 'Ab':8, 'A':9, 'A#':10, 'Bb':10, 'B':11}
 pctochar = {0:'C', 1:'C#', 2:'D', 3:'D#', 4:'E', 5:'F', 6:'F#', 7:'G', 8:'G#', 9:'A', 10:'A#', 11:'B'}
 
+# DATA INITIATION
 with open('chordlib.json','r') as rdata:
     chordlib = json.load(rdata)
     rdata.close()
@@ -18,64 +19,6 @@ dscaletype = chordlib['dscaletype']
 # NOTE ON DATA TYPE: 
 # A chord is a list in the following format: ["prefix", notes1, notes2, ...]
 # Where the prefix is the chord type: '' = Major, 'm' = Minor, '7' = Major 7th...
-
-# FUNCTION TO ADD CUSTOM CHORD TO ALL SCALETYPE LIBRARY (Chord format = ["prefix", notes1, notes2, ...])
-def addtoall(chord):
-    test = chord[1:]            # Chord to be added with prefix removed (test chord)
-    for scaletype in dscaletype.values():                               # Loop to go through all scale types
-        for notes in scaletype['scalenotes']:                           # Loop to go through all notes (offset) in a scale type
-            testofnote = []
-            for i in test:                                              # Loop to add the note offset to all notes of the testing chord
-                i = i + notes
-                testofnote.append(i%12)
-            if set(testofnote).issubset(scaletype['scalenotes']):       # Check if all the notes in the current testing chord belongs to scale
-                testofnote.insert(0,chord[0])
-                scaletype['ctypeofscale'].append(testofnote)
-    
-    chordlib['dscaletype'] = dscaletype                                 # Saving back to data.json
-    chordlib['dchordtype'] = dchordtype
-
-    with open('chordlib.json','w') as wdata:
-        json.dump(chordlib, wdata, indent = 4, sort_keys = True)
-        wdata.close()
-
-# FUNCTION TO ADD CUSTOM CHORD TO 1 SCALETYPE LIBRARY
-def addtoscale(chord, scaletype):
-    tc = chord[1:]
-    for notes in scaletype['scalenotes']:
-        tcofnote = []
-        for i in tc:
-            i = i + notes
-            tcofnote.append(i%12)
-        if set(tcofnote).issubset(scaletype['scalenotes']):
-            tcofnote.insert(0,chord[0])
-            scaletype['ctypeofscale'].append(tcofnote)
-
-    chordlib['dscaletype'] = dscaletype
-    chordlib['dchordtype'] = dchordtype
-
-    with open('chordlib.json','w') as wdata:
-        json.dump(chordlib, wdata, indent = 4, sort_keys = True)
-        wdata.close()
-        
-# FUNCTION TO ADD A CHORD TO MIDI TRACK
-def addChordMidi(midiobj, track: int, channel: int, chord: list, timesig: list, starttime: float):
-    for i in range(timesig[0]):                     # Loop to add each time a chord is played according to the number of notes in bar
-        for j in range(1, len(chord)):              # Loop to add notes of the current chord
-                if j == 1:
-                    tracker = 0
-                elif (chord[j] - chord[j - 1]) < 0: # Increase pitch if the pitch class of current note is smaller than the previous note
-                    tracker += 12
-                midiobj.addNote(track, channel, chord[j] + 48 + tracker, starttime, duration = 4 / timesig[1], volume = 70)
-        starttime += 4 / timesig[1]                 # starttime is in quarter notes
-
-# FUNCTION TO ADD A RIFF TO MIDI TRACK
-def addRiffMidi(midiobj, track: int, channel: int, riff: list, starttime: float):
-    for note in riff:
-        midinote = note[0] + 12 * (note[1] + 1)
-        duration = note[2]
-        midiobj.addNote(track, channel, midinote, starttime, duration, volume = 100)
-        starttime += duration
 
 class Song:         # Default song structure: verse - verse - chorus - verse - verse - chorus - bridge - solo - chorus - chorus
     def __init__(self, scaletype, root='C', vbarnum=4, cbarnum=4, bbarnum=4, timesig=[4,4], bpm=120):
