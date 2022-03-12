@@ -12,7 +12,7 @@ A Chord is a list containing the following elements in the same order:
 ### Note
 A note is a list containing the following elements in the same order: 
 - Pitch class (0 to 11): **int**
-- Octave number (with 4 being the middle C): **float**
+- Octave number (with 4 being the middle C): **int**
 - Note duration in quarter notes: **float**
 	> Example: A3 half note - [9, 3, 2]
 

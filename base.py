@@ -76,6 +76,13 @@ basechordproglib = {
         }
     }
 
+basenotelib = {
+    'duration': [0.25, 0.5, 1, 2, 4],
+    'durationweight': [5, 20, 60, 10, 5],
+    'octave': [2, 3, 4, 5, 6],
+    'octaveweight': [5, 25, 40, 25, 5]
+    }
+
 # FUNCTION TO RESET THE CHORDPROGLIB AND CHORDLIB WITH THE DATA IN THIS MODULE
 def resetlib():
     with open('chordlib.json','w') as wdata:
@@ -84,6 +91,10 @@ def resetlib():
 
     with open('chordproglib.json','w') as wdata:
             json.dump(basechordproglib, wdata, indent = 4, sort_keys = True)
+            wdata.close()
+
+    with open('notelib.json', 'w') as wdata:
+            json.dump(basenotelib, wdata, indent = 4, sort_keys = True)
             wdata.close()
 
 # FUNCTION TO ADD CUSTOM CHORD TO ALL SCALETYPE LIBRARY (Chord format = ["prefix", notes1, notes2, ...])

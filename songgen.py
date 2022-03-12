@@ -2,6 +2,7 @@ import json
 import random
 import time
 from core import Song
+from base import resetlib
 
 # Dictionaries for printing
 sname = {'majscale':'Major scale', 'minscale':'Minor scale'}
@@ -36,6 +37,7 @@ def generatesong():
     x.printprog()
 
 generatesong()
+
 
 
 
